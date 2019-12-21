@@ -1,5 +1,8 @@
 const MongoClient = require('mongodb').MongoClient;
 const url = 'mongodb://127.0.0.1:27017/mogodbTest';
+const path = require('path');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
 
 var login = async (ctx, next) => {
     const {phone, password} = ctx.request.body;
@@ -7,9 +10,11 @@ var login = async (ctx, next) => {
     if(result && result.length > 0) {
         var resultc = await find_correct_pass(phone, password);
         if(resultc && resultc.length > 0) {
+            const phone_ = resultc[0].phone;
+            let token = generateToken({phone_});
             ctx.response.body = {
                 code: 0,//0表示成功
-                data:'',
+                data:token,
                 msg:'登陆成功'
             };
         } else {
@@ -56,6 +61,16 @@ var find_correct_pass = async function(phone, password) {//查找密码是不是
             })
         })
     })
+}
+
+var generateToken = (data) => {//生成token
+    let created = Math.floor(Date.now() / 1000);
+    let cert = fs.readFileSync(path.join(__dirname, '../config/pri.pem'));//私钥
+    let token = jwt.sign({
+        data,
+        exp: created + 3600 * 24
+    }, cert, {algorithm: 'RS256'});
+    return token;
 }
 
 module.exports = {
