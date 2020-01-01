@@ -3,6 +3,7 @@ const url = 'mongodb://127.0.0.1:27017/mogodbTest';
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const { verifyToken } = require('../utils');
 
 var login = async (ctx, next) => {
     const {phone, password} = ctx.request.body;
@@ -30,6 +31,45 @@ var login = async (ctx, next) => {
             data:'',
             msg:'登陆账户不存在'
         }
+    }
+};
+
+var getUserInfo = async (ctx, next) => {
+    const { phone } = ctx.request.body;
+    const header = ctx.request.header;
+    const token = header['x-token'];
+    if(token) {
+        let result = verifyToken(token);
+        let tel = result.phone_;
+        if(tel == phone) {
+            var results = await find_have_phone(phone);
+            if(results && results.length > 0) {
+                const {username, phone} = results[0];
+                ctx.response.body = {
+                    code: 0,
+                    data: {username, phone},
+                    msg:''
+                };
+            } else {
+                ctx.response.body = {
+                    code: 2,
+                    data:'',
+                    msg:'无用户信息'
+                };
+            }
+        } else {
+            ctx.response.body = {
+                code: 4,//4token异常
+                data:'',
+                msg:'token异常'
+            };
+        }
+    } else {
+        ctx.response.body = {
+            code: 4,//4token异常
+            data:'',
+            msg:'no token'
+        };
     }
 };
 
@@ -74,5 +114,6 @@ var generateToken = (data) => {//生成token
 }
 
 module.exports = {
-    'POST /myapi/login': login
+    'POST /myapi/login': login,
+    'POST /myapi/getUserInfo': getUserInfo
 };
